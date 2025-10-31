@@ -1,29 +1,37 @@
+# app.py
 import pandas as pd
-import glob
+from dash import Dash, dcc, html
+import plotly.express as px
 
-# Get all CSV files in the data folder
-csv_files = glob.glob("data/*.csv")
+# Load processed sales data
+df = pd.read_csv('data/processed_sales.csv')
 
-# Load them into a list of DataFrames
-dfs = [pd.read_csv(file) for file in csv_files]
+# Make sure the Date column is datetime
+df['Date'] = pd.to_datetime(df['Date'])
 
-processed_dfs = []
+# Sort by date
+df = df.sort_values('Date')
 
-for df in dfs:
-    # Filter Pink Morsels
-    df = df[df['product'] == 'Pink Morsel']
+# Create line chart
+fig = px.line(df, x='Date', y='Sales', color='Region', 
+              title='Pink Morsel Sales Over Time',
+              labels={'Sales': 'Total Sales', 'Date': 'Date', 'Region': 'Region'})
+
+# Initialize Dash app
+app = Dash(__name__)
+
+# Define layout
+app.layout = html.Div(children=[
+    html.H1(children='Pink Morsel Sales Visualiser'),
     
-    # Calculate sales
-    df['Sales'] = df['quantity'] * df['price']
+    html.P(children='Visualising sales before and after the price increase on 15th Jan 2021.'),
     
-    # Keep only required columns
-    df = df[['Sales', 'date', 'region']].copy()
-    
-    # Rename columns if necessary
-    df.rename(columns={'date': 'Date', 'region': 'Region'}, inplace=True)
-    
-    processed_dfs.append(df)
+    dcc.Graph(
+        id='sales-line-chart',
+        figure=fig
+    )
+])
 
-final_df = pd.concat(processed_dfs, ignore_index=True)
-final_df.to_csv('data/processed_sales.csv', index=False)
-print("Data processing complete! File saved as 'processed_sales.csv'.")
+# Run the app
+if __name__ == '__main__':
+    app.run(debug=True)
